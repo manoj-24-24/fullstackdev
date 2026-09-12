@@ -312,24 +312,46 @@ function CodeBlock({ code, compact }: { code: string; compact?: boolean }): JSX.
 function FileViewer({ url, name, onClose }: { url: string; name: string; onClose: () => void }): JSX.Element {
   const isImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(name);
   const isPdf = /\.pdf$/i.test(name);
+  const [failed, setFailed] = useState(false);
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-[#061c2c]/95 backdrop-blur-sm" onClick={onClose}>
       <div className="flex items-center justify-between gap-3 bg-[#061c2c] px-4 py-3 text-white sm:px-6">
         <p className="min-w-0 truncate text-sm font-bold">{name}</p>
-        <button
-          onClick={onClose}
-          title="Close and return"
-          aria-label="Close viewer"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
-        >
-          <X className="h-5 w-5" />
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            title="Open in a new tab"
+            className="flex h-10 items-center gap-1.5 rounded-full bg-white/10 px-3 text-xs font-bold text-white transition hover:bg-white/20"
+          >
+            <FileText className="h-4 w-4" />Open tab
+          </a>
+          <button
+            onClick={onClose}
+            title="Close and return"
+            aria-label="Close viewer"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
       </div>
       <div className="flex flex-1 items-center justify-center overflow-auto p-3 sm:p-6" onClick={(e) => e.stopPropagation()}>
-        {isImage ? (
-          <img src={url} alt={name} className="max-h-full max-w-full rounded-xl bg-white object-contain shadow-2xl" />
+        {failed ? (
+          <div className="max-w-md rounded-2xl bg-white p-8 text-center shadow-2xl">
+            <FileText className="mx-auto h-10 w-10 text-[#a33b3b]" />
+            <p className="mt-4 break-all text-sm font-semibold">{name}</p>
+            <p className="mt-2 text-sm text-[#a33b3b]">This file could not be loaded. It may have been uploaded before durable storage was enabled — remove and re-attach it once and it will work everywhere from then on.</p>
+            <div className="mt-5 flex items-center justify-center gap-3">
+              <a href={url} target="_blank" rel="noreferrer" className="btn-secondary text-xs">Try new tab</a>
+              <button onClick={onClose} className="btn-primary text-xs">Back to app</button>
+            </div>
+          </div>
+        ) : isImage ? (
+          <img src={url} alt={name} onError={() => setFailed(true)} className="max-h-full max-w-full rounded-xl bg-white object-contain shadow-2xl" />
         ) : isPdf ? (
-          <iframe src={url} title={name} className="h-full w-full max-w-5xl rounded-xl bg-white shadow-2xl" />
+          <iframe src={url} title={name} onError={() => setFailed(true)} className="h-full w-full max-w-5xl rounded-xl bg-white shadow-2xl" />
         ) : (
           <div className="max-w-md rounded-2xl bg-white p-8 text-center shadow-2xl">
             <FileText className="mx-auto h-10 w-10 text-[#087f78]" />

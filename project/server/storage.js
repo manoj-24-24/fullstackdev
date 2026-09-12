@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { requireAuth } from './auth.js';
 import { pool } from './db.js';
 import { cloudinaryEnabled, cloudinaryPut, cloudinarySignedUrl, cloudinaryDelete } from './cloudinary.js';
-import { r2Enabled, r2Put, r2SignedUrl, r2Delete } from './r2.js';
+import { objectStoreEnabled, r2Put, r2SignedUrl, r2Delete } from './r2.js';
 
 export const storageRouter = Router();
 
@@ -42,13 +42,13 @@ storageRouter.post('/upload', requireAuth, upload.single('file'), async (req, re
       } catch (err) {
         console.error('[storage] Cloudinary upload failed — keeping DB copy instead', err);
       }
-    } else if (r2Enabled()) {
-      // Primary path on Render: store bytes in Cloudflare R2 (10 GB free),
+    } else if (objectStoreEnabled()) {
+      // Primary path on Render: store bytes in B2 or R2 (10 GB free each),
       // keeping the database small. The disk copy is just a dev cache.
       try {
         await r2Put(`${bucket}/${rel}`, req.file.buffer, req.file.mimetype || 'application/octet-stream');
       } catch (err) {
-        console.error('[storage] R2 upload failed — keeping DB copy instead', err);
+        console.error('[storage] object-store upload failed — keeping DB copy instead', err);
       }
     }
 
@@ -119,12 +119,12 @@ storageRouter.post('/signed-url', requireAuth, async (req, res) => {
       console.error('[storage] Cloudinary sign failed — serving from local/DB instead', err);
     }
   }
-  if (r2Enabled()) {
+  if (objectStoreEnabled()) {
     try {
       const url = await r2SignedUrl(`${bucket}/${rel}`, 3600);
       return res.json({ data: { signedUrl: url }, error: null });
     } catch (err) {
-      console.error('[storage] R2 sign failed — serving from local/DB instead', err);
+      console.error('[storage] object-store sign failed — serving from local/DB instead', err);
     }
   }
   return res.json({ data: { signedUrl: `/uploads/${bucket}/${rel}` }, error: null });
@@ -144,7 +144,7 @@ storageRouter.post('/remove', requireAuth, async (req, res) => {
       const target = path.join(UPLOAD_DIR, bucket, safeRel);
       if (target.startsWith(UPLOAD_DIR) && fs.existsSync(target)) fs.unlinkSync(target);
       if (pool) void pool.query('DELETE FROM files_blob WHERE id = ?', [`${bucket}/${safeRel}`]);
-      if (r2Enabled()) void r2Delete(`${bucket}/${safeRel}`);
+      if (objectStoreEnabled()) void r2Delete(`${bucket}/${safeRel}`);
     }
     res.json({ data: null, error: null });
   } catch (err) {

@@ -37,9 +37,19 @@ services:
         value: "false"   # hosted providers pre-create the database
       - key: JWT_SECRET
         generateValue: true   # Render generates a strong random secret on first deploy
-      # Cloudflare R2 (10 GB free) OR Cloudinary (~25 GB free) stores uploads
-      # so the 1 GB MySQL stays small. Configure ONE of the two — see
-      # HOSTING.md Step 5. If neither is set, uploads go into MySQL directly.
+      # Upload storage so the 1 GB MySQL stays small — configure ONE provider
+      # (see HOSTING.md Step 5): Backblaze B2 (10 GB free, NO card),
+      # Cloudinary (~25 GB/month free, no card), or Cloudflare R2 (card needed).
+      - key: B2_ENDPOINT
+        sync: false
+      - key: B2_REGION
+        value: "us-east-005"
+      - key: B2_ACCESS_KEY_ID
+        sync: false
+      - key: B2_SECRET_ACCESS_KEY
+        sync: false
+      - key: B2_BUCKET
+        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

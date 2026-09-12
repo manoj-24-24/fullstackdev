@@ -1,5 +1,5 @@
 // One-time migration: copy legacy file bytes from the MySQL files_blob table
-// into the configured cloud storage (Cloudinary first, then R2), then shrink
+// into the configured cloud storage (Cloudinary first, then B2/R2), then shrink
 // each row to a metadata/pointer row with data = NULL. Run whenever the
 // storage env vars are set and the database still holds bytes:
 //   node server/migrate-to-cloud.js
@@ -7,11 +7,11 @@
 import 'dotenv/config';
 import { initDb, pool } from './db.js';
 import { initCloudinary, cloudinaryEnabled, cloudinaryPut } from './cloudinary.js';
-import { r2Enabled, r2Put } from './r2.js';
+import { objectStoreEnabled, r2Put } from './r2.js';
 
 initCloudinary();
-if (!cloudinaryEnabled() && !r2Enabled()) {
-  console.error('No cloud storage configured. Set CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET (or the R2_* vars) first.');
+if (!cloudinaryEnabled() && !objectStoreEnabled()) {
+  console.error('No cloud storage configured. Set CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET (or the B2_*/R2_* vars) first.');
   process.exit(1);
 }
 
@@ -27,7 +27,7 @@ for (const row of rows) {
     if (cloudinaryEnabled()) {
       const { publicId, resourceType } = await cloudinaryPut(key, row.data, row.mime);
       await pool.query('UPDATE files_blob SET data = NULL, cloud_public_id = ?, cloud_resource_type = ? WHERE id = ?', [publicId, resourceType, row.id]);
-    } else {
+    } else if (objectStoreEnabled()) {
       await r2Put(key, row.data, row.mime);
       await pool.query('UPDATE files_blob SET data = NULL WHERE id = ?', [row.id]);
     }

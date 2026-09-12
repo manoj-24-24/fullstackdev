@@ -90,9 +90,28 @@ Open your service URL (`https://fullstackdev.onrender.com`) and sign in as the a
 
 ## Step 5 — (Recommended) Offload uploads to cloud storage — free, no card
 
-Your MySQL plan has 1 GB total, and uploads stored in the database eat into it. Two card-free options are built in — configure **one** of them; if neither is set, uploads simply live in MySQL like before. **Cloudinary is the easiest** (no card at all, ~25 GB free):
+Your MySQL plan has 1 GB total, and uploads stored in the database eat into it. Three options are built in — configure **one** of them; if none is set, uploads simply live in MySQL like before.
 
-### Option A — Cloudinary (~25 GB free, no card) ← easiest
+### Option A — Backblaze B2 (10 GB free, no card) ← recommended
+
+10 GB of true storage (no monthly credit juggling) plus 1 GB/day of free downloads.
+
+1. Go to [backblaze.com](https://www.backblaze.com/cloud-storage) → **Sign up** (email only, no credit card)
+2. Console → **B2 Cloud Storage** → **Create a Bucket** → name it e.g. `fullstackdev-files` → keep it **Private** → create
+3. On the bucket's page → **Upload/Download** is where files will appear later. Now create the key: left sidebar **Application Keys** → **Add a New Application Key**:
+   - Name: `fullstackdev` · Type: **Read and Write** · File name prefix: *(leave blank)*
+4. Copy the values it shows (the **applicationKey secret is displayed only once!**):
+   - **keyID** → `B2_ACCESS_KEY_ID`
+   - **applicationKey** → `B2_SECRET_ACCESS_KEY`
+   - **Endpoint** (shown with the key and in bucket details, e.g. `https://s3.us-east-005.backblazeb2.com`) → `B2_ENDPOINT`
+   - **Region** (the `us-east-005` part of that endpoint) → `B2_REGION`
+   - Bucket name → `B2_BUCKET`
+5. In Render: your service → **Environment** → add those five variables → **Save** (this triggers a redeploy)
+6. Done — uploads go to B2 as private objects served through short-lived presigned URLs; MySQL keeps only text data + tiny metadata rows.
+
+### Option B — Cloudinary (~25 GB-months free, no card) ← easiest
+
+Note: Cloudinary's free plan is **25 credits/month**, where 1 credit ≈ 1 GB stored per month OR 1 GB delivered. For a small class platform this is comfortable (typically 3–6 credits used), but B2's flat 10 GB is simpler to reason about.
 
 1. Go to [cloudinary.com](https://cloudinary.com) → **Sign up for free** (email + password only, no credit card)
 2. After signup, the **Dashboard → Getting started** page (or **Settings → API Keys**) shows three values:
@@ -100,9 +119,8 @@ Your MySQL plan has 1 GB total, and uploads stored in the database eat into it. 
    - **API Key** → `CLOUDINARY_API_KEY`
    - **API Secret** → `CLOUDINARY_API_SECRET`
 3. In Render: your service → **Environment** → add those three variables → **Save** (this triggers a redeploy)
-4. Done — uploads now go to Cloudinary as private assets served through short-lived signed URLs. The MySQL database keeps only text data + tiny file metadata rows.
 
-### Option B — Cloudflare R2 (10 GB free, requires a card on file but charges $0)
+### Option C — Cloudflare R2 (10 GB free, requires a card on file but charges $0)
 
 1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → sign up / sign in (free)
 2. Left sidebar → **R2 Object Storage** → **Create bucket** → name it e.g. `fullstackdev-files` → create (defaults are fine)
@@ -122,7 +140,7 @@ Files uploaded *before* the env vars were set still live in the database. After 
 node server/migrate-to-cloud.js
 ```
 
-It copies each file's bytes to the cloud (Cloudinary first, then R2) and shrinks the database row to a tiny pointer — the DB drops back to near-zero storage. Safe to re-run; any file that fails stays safely in MySQL.
+It copies each file's bytes to the cloud (B2/R2/Cloudinary, whichever is configured) and shrinks the database row to a tiny pointer — the DB drops back to near-zero storage. Safe to re-run; any file that fails stays safely in MySQL.
 
 If cloud storage is ever misconfigured, the app automatically falls back to storing files in MySQL, so nothing breaks.
 

@@ -88,7 +88,23 @@ Open your service URL (`https://fullstackdev.onrender.com`) and sign in as the a
 
 > In production the server seeds the admin password **once** and never resets it on restart — change it right away via the app, and it will stay changed. (Locally in dev it still auto-resets so you can't get locked out.)
 
-## Step 5 — Things to know about the free tier
+## Step 5 — (Recommended) Offload uploads to Cloudflare R2 — 10 GB free
+
+Your MySQL plan has 1 GB total, and uploads stored in the database eat into it. Cloudflare R2 gives you **10 GB free** for files, keeping the database small and fast. One-time setup (~5 minutes):
+
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → sign up / sign in (free, no credit card)
+2. Left sidebar → **R2 Object Storage** → **Create bucket** → name it e.g. `fullstackdev-files` → create (defaults are fine)
+3. On the R2 page: **Manage R2 API Tokens** → **Create API Token** → permissions **Object Read & Write** → scope to your bucket → create
+4. Copy the four values shown:
+   - **Access Key ID** → `R2_ACCESS_KEY_ID`
+   - **Secret Access Key** → `R2_SECRET_ACCESS_KEY`
+   - **Account ID** (shown on the R2 overview page, right side) → `R2_ACCOUNT_ID`
+   - Bucket name → `R2_BUCKET`
+5. In Render: your service → **Environment** → add those four variables → **Save** (this triggers a redeploy)
+
+That's it — uploads now go to R2 and are served via short-lived presigned URLs; the database keeps only text data. If R2 is ever misconfigured, the app automatically falls back to storing files in MySQL, so nothing breaks.
+
+## Step 6 — Things to know about the free tier
 
 - **Spin-down:** after ~15 minutes without traffic the service sleeps; the next visit takes ~30–50 s to wake. Keep the tab open or ping `/api/health` periodically if that bothers you.
 - **Uploads are ephemeral:** files uploaded to contributions/notes are stored on the service's local disk, which Render clears on every redeploy/restart. On the free plan that means uploads vanish on each deploy. Fixes, when you need them: attach a Render **persistent disk** (paid, one env-var-free mount change in `server/storage.js`'s `UPLOAD_DIR`) or move storage to an object store later.

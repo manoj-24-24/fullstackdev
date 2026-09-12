@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { requireAuth } from './auth.js';
 import { pool } from './db.js';
+import { r2Enabled, r2Put, r2SignedUrl, r2Delete } from './r2.js';
 
 export const storageRouter = Router();
 
@@ -30,9 +31,19 @@ storageRouter.post('/upload', requireAuth, upload.single('file'), async (req, re
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, req.file.buffer);
 
-    // Durable copy: the database holds the bytes so the file survives
-    // redeploys and exists on every instance (disk is ephemeral on hosts).
+    if (r2Enabled()) {
+      // Primary path on Render: store bytes in Cloudflare R2 (10 GB free),
+      // keeping the database small. The disk copy is just a dev cache.
+      try {
+        await r2Put(`${bucket}/${rel}`, req.file.buffer, req.file.mimetype || 'application/octet-stream');
+      } catch (err) {
+        console.error('[storage] R2 upload failed — keeping DB copy instead', err);
+      }
+    }
+
     if (pool) {
+      // Durable fallback copy: the database holds the bytes when R2 is not
+      // configured (local dev) or when the R2 write just failed.
       await pool.query(
         'INSERT INTO files_blob (id, bucket, path, mime, size, data) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE mime = VALUES(mime), size = VALUES(size), data = VALUES(data)',
         [`${bucket}/${rel}`, bucket, rel, req.file.mimetype || 'application/octet-stream', req.file.size, req.file.buffer]
@@ -68,11 +79,20 @@ export async function serveUpload(req, res) {
   }
 }
 
-// POST /api/storage/signed-url — returns the static path for an upload.
-storageRouter.post('/signed-url', requireAuth, (req, res) => {
+// POST /api/storage/signed-url — presigned R2 URL when configured, else the
+// static path served by this process (disk first, database fallback).
+storageRouter.post('/signed-url', requireAuth, async (req, res) => {
   const bucket = safeSegment(req.body?.bucket || 'files');
   const rel = String(req.body?.path || '').split('/').map(safeSegment).join('/');
-  res.json({ data: { signedUrl: `/uploads/${bucket}/${rel}` }, error: null });
+  if (r2Enabled()) {
+    try {
+      const url = await r2SignedUrl(`${bucket}/${rel}`, 3600);
+      return res.json({ data: { signedUrl: url }, error: null });
+    } catch (err) {
+      console.error('[storage] R2 sign failed — serving from local/DB instead', err);
+    }
+  }
+  return res.json({ data: { signedUrl: `/uploads/${bucket}/${rel}` }, error: null });
 });
 
 // POST /api/storage/remove — body: { bucket, paths: [] }
@@ -84,6 +104,7 @@ storageRouter.post('/remove', requireAuth, (req, res) => {
       const target = path.join(UPLOAD_DIR, bucket, safeRel);
       if (target.startsWith(UPLOAD_DIR) && fs.existsSync(target)) fs.unlinkSync(target);
       if (pool) void pool.query('DELETE FROM files_blob WHERE id = ?', [`${bucket}/${safeRel}`]);
+      if (r2Enabled()) void r2Delete(`${bucket}/${safeRel}`);
     }
     res.json({ data: null, error: null });
   } catch (err) {

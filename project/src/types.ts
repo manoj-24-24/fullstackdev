@@ -36,3 +36,4 @@ export interface Notification { id: string; user_id: string; sender_id?: string 
 export interface ContributionFile { id: string; contribution_id: string; file_url: string; file_name: string; file_type: string; }
 export type NoteCategory = 'Frontend' | 'Backend' | 'Cloud Computing';
 export interface StudyNote { id: string; user_id: string; category: NoteCategory; title: string; description: string; file_path: string; file_name: string; file_type: string; created_at: string; profiles?: { full_name: string; role: string } | null; }
+export interface Syllabus { id: string; subject_id: string; title: string; file_path: string; file_name: string; file_type: string; uploaded_by: string; created_at: string; updated_at: string; subjects?: { id: string; name: string } | null; profiles?: { full_name: string; role: string } | null; }

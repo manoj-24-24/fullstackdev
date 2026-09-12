@@ -117,6 +117,24 @@ CREATE TABLE IF NOT EXISTS study_notes (
   CONSTRAINT fk_notes_user FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Per-subject syllabus files, uploaded and maintained by teachers/admins,
+-- viewable by everyone on the learning path.
+CREATE TABLE IF NOT EXISTS syllabus (
+  id CHAR(36) PRIMARY KEY,
+  subject_id CHAR(36) NOT NULL,
+  title VARCHAR(255) NOT NULL DEFAULT 'Syllabus',
+  file_path TEXT NOT NULL,
+  file_name VARCHAR(255) NOT NULL,
+  file_type VARCHAR(255) NOT NULL,
+  uploaded_by CHAR(36) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_syllabus_subject (subject_id),
+  KEY idx_syllabus_subject (subject_id),
+  CONSTRAINT fk_syllabus_subject FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,
+  CONSTRAINT fk_syllabus_user FOREIGN KEY (uploaded_by) REFERENCES profiles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS scoring_rules (
   id CHAR(36) PRIMARY KEY,
   name VARCHAR(255) NOT NULL UNIQUE,

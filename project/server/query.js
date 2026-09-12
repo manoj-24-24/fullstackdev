@@ -19,6 +19,7 @@ const TABLES = {
   audit_logs: ['id', 'user_id', 'action', 'target_id', 'created_at'],
   admin_notes: ['id', 'author_id', 'subject_id', 'title', 'summary', 'description', 'code', 'file_path', 'file_name', 'file_type', 'created_at', 'updated_at'],
   note_feedback: ['id', 'note_id', 'user_id', 'reviewer_name', 'role', 'feedback', 'created_at'],
+  syllabus: ['id', 'subject_id', 'title', 'file_path', 'file_name', 'file_type', 'uploaded_by', 'created_at', 'updated_at'],
 };
 
 // How joined relations map back to their foreign-key column on the base table.
@@ -27,6 +28,7 @@ const JOINS = {
   feedback: { profiles: 'teacher_id' },
   admin_notes: { subjects: 'subject_id', profiles: 'author_id' },
   study_notes: { profiles: 'user_id' },
+  syllabus: { subjects: 'subject_id', profiles: 'uploaded_by' },
 };
 
 const q = (name) => `\`${name.replace(/[^a-zA-Z0-9_]/g, '')}\``;
@@ -135,7 +137,7 @@ queryRouter.post('/', requireAuth, async (req, res) => {
     const cols = TABLES[table];
 
     // Server-controlled ownership columns, mirroring the old auth.uid() defaults.
-    const owned = { contributions: 'student_id', feedback: 'teacher_id', study_notes: 'user_id', notifications: 'user_id', admin_notes: 'author_id', note_feedback: 'user_id' };
+    const owned = { contributions: 'student_id', feedback: 'teacher_id', study_notes: 'user_id', notifications: 'user_id', admin_notes: 'author_id', note_feedback: 'user_id', syllabus: 'uploaded_by' };
 
     if (op === 'select') {
       // Notifications are private to their recipient — scope every read to the
@@ -208,6 +210,12 @@ queryRouter.post('/', requireAuth, async (req, res) => {
         payload.reviewer_role = role;
       }
       if (table === 'note_feedback') payload.role = role;
+      if (table === 'syllabus') {
+        // Syllabus files are curated by teachers/admins; the uploader is always
+        // the caller, and one row per subject is enforced via upsert.
+        if (!isStaff) return res.status(403).json({ data: null, error: { message: 'Only teachers and administrators can upload the syllabus.' } });
+        payload.uploaded_by = req.userId;
+      }
       if (table === 'contributions') {
         // Student work enters the approval queue; teacher/admin contributions
         // are published immediately so students and admins can see them.

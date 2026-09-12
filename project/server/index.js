@@ -8,6 +8,7 @@ import { authRouter } from './auth.js';
 import { queryRouter } from './query.js';
 import { rpcRouter } from './rpc.js';
 import { storageRouter, UPLOAD_DIR, serveUpload } from './storage.js';
+import { initCloudinary } from './cloudinary.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) > 0 ? Number(process.env.PORT) : 3001;
@@ -15,6 +16,8 @@ const PORT = Number(process.env.PORT) > 0 ? Number(process.env.PORT) : 3001;
 // service serves both the app and the API — static hosting takes over.
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 const hasDist = fs.existsSync(path.join(DIST_DIR, 'index.html'));
+
+initCloudinary();
 
 const app = express();
 app.use(cors());

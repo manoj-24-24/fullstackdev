@@ -62,8 +62,29 @@ export async function initDb() {
 
   const schema = readFileSync(new URL('./schema.sql', import.meta.url), 'utf8');
   await pool.query(schema);
+  await applyMigrations();
   await seed();
   return pool;
+}
+
+/**
+ * Column-level migrations for tables that already exist (CREATE TABLE IF NOT
+ * EXISTS cannot add columns to them). Idempotent: 1060 = duplicate column.
+ */
+async function applyMigrations() {
+  const migrations = [
+    // Cloud-storage pointer columns for files_blob (data NULL = bytes in cloud).
+    'ALTER TABLE files_blob MODIFY COLUMN data LONGBLOB NULL',
+    'ALTER TABLE files_blob ADD COLUMN cloud_public_id VARCHAR(500) NULL',
+    'ALTER TABLE files_blob ADD COLUMN cloud_resource_type VARCHAR(20) NULL',
+  ];
+  for (const migration of migrations) {
+    try {
+      await pool.query(migration);
+    } catch (err) {
+      if (err?.errno !== 1060) throw err;
+    }
+  }
 }
 
 async function seed() {

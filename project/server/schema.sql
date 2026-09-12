@@ -161,7 +161,9 @@ CREATE TABLE IF NOT EXISTS files_blob (
   path VARCHAR(500) NOT NULL,
   mime VARCHAR(255) NOT NULL DEFAULT 'application/octet-stream',
   size INT NOT NULL DEFAULT 0,
-  data LONGBLOB NOT NULL,
+  data LONGBLOB,                     -- NULL when the bytes live in cloud storage
+  cloud_public_id VARCHAR(500) NULL, -- Cloudinary asset id when cloud-backed
+  cloud_resource_type VARCHAR(20) NULL, -- 'image' | 'raw' | 'video'
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_files_blob_bucket (bucket)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

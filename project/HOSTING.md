@@ -88,11 +88,23 @@ Open your service URL (`https://fullstackdev.onrender.com`) and sign in as the a
 
 > In production the server seeds the admin password **once** and never resets it on restart — change it right away via the app, and it will stay changed. (Locally in dev it still auto-resets so you can't get locked out.)
 
-## Step 5 — (Recommended) Offload uploads to Cloudflare R2 — 10 GB free
+## Step 5 — (Recommended) Offload uploads to cloud storage — free, no card
 
-Your MySQL plan has 1 GB total, and uploads stored in the database eat into it. Cloudflare R2 gives you **10 GB free** for files, keeping the database small and fast. One-time setup (~5 minutes):
+Your MySQL plan has 1 GB total, and uploads stored in the database eat into it. Two card-free options are built in — configure **one** of them; if neither is set, uploads simply live in MySQL like before. **Cloudinary is the easiest** (no card at all, ~25 GB free):
 
-1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → sign up / sign in (free, no credit card)
+### Option A — Cloudinary (~25 GB free, no card) ← easiest
+
+1. Go to [cloudinary.com](https://cloudinary.com) → **Sign up for free** (email + password only, no credit card)
+2. After signup, the **Dashboard → Getting started** page (or **Settings → API Keys**) shows three values:
+   - **Cloud name** → `CLOUDINARY_CLOUD_NAME`
+   - **API Key** → `CLOUDINARY_API_KEY`
+   - **API Secret** → `CLOUDINARY_API_SECRET`
+3. In Render: your service → **Environment** → add those three variables → **Save** (this triggers a redeploy)
+4. Done — uploads now go to Cloudinary as private assets served through short-lived signed URLs. The MySQL database keeps only text data + tiny file metadata rows.
+
+### Option B — Cloudflare R2 (10 GB free, requires a card on file but charges $0)
+
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → sign up / sign in (free)
 2. Left sidebar → **R2 Object Storage** → **Create bucket** → name it e.g. `fullstackdev-files` → create (defaults are fine)
 3. On the R2 page: **Manage R2 API Tokens** → **Create API Token** → permissions **Object Read & Write** → scope to your bucket → create
 4. Copy the four values shown:
@@ -102,12 +114,22 @@ Your MySQL plan has 1 GB total, and uploads stored in the database eat into it. 
    - Bucket name → `R2_BUCKET`
 5. In Render: your service → **Environment** → add those four variables → **Save** (this triggers a redeploy)
 
-That's it — uploads now go to R2 and are served via short-lived presigned URLs; the database keeps only text data. If R2 is ever misconfigured, the app automatically falls back to storing files in MySQL, so nothing breaks.
+### Either way: move the files already sitting in MySQL (one command)
+
+Files uploaded *before* the env vars were set still live in the database. After the env vars exist locally or on Render, run once:
+
+```bash
+node server/migrate-to-cloud.js
+```
+
+It copies each file's bytes to the cloud (Cloudinary first, then R2) and shrinks the database row to a tiny pointer — the DB drops back to near-zero storage. Safe to re-run; any file that fails stays safely in MySQL.
+
+If cloud storage is ever misconfigured, the app automatically falls back to storing files in MySQL, so nothing breaks.
 
 ## Step 6 — Things to know about the free tier
 
 - **Spin-down:** after ~15 minutes without traffic the service sleeps; the next visit takes ~30–50 s to wake. Keep the tab open or ping `/api/health` periodically if that bothers you.
-- **Uploads are ephemeral:** files uploaded to contributions/notes are stored on the service's local disk, which Render clears on every redeploy/restart. On the free plan that means uploads vanish on each deploy. Fixes, when you need them: attach a Render **persistent disk** (paid, one env-var-free mount change in `server/storage.js`'s `UPLOAD_DIR`) or move storage to an object store later.
+- **Uploads are durable** when stored in MySQL or cloud storage (Cloudinary/R2). Files uploaded before cloud storage was configured lived on the service's local disk, which Render clears on every redeploy — those were migrated into the database. New uploads never touch the disk only.
 - **Every `git push` auto-deploys.** To update the live site, just push to `main`.
 
 ## Local development (unchanged)

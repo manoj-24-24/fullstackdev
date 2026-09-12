@@ -37,8 +37,15 @@ services:
         value: "false"   # hosted providers pre-create the database
       - key: JWT_SECRET
         generateValue: true   # Render generates a strong random secret on first deploy
-      # Cloudflare R2 (10 GB free) stores uploads so the 1 GB MySQL stays small.
-      # Create an R2 bucket + API token at dash.cloudflare.com and fill these in:
+      # Cloudflare R2 (10 GB free) OR Cloudinary (~25 GB free) stores uploads
+      # so the 1 GB MySQL stays small. Configure ONE of the two — see
+      # HOSTING.md Step 5. If neither is set, uploads go into MySQL directly.
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
       - key: R2_ACCOUNT_ID
         sync: false
       - key: R2_ACCESS_KEY_ID

@@ -7,7 +7,7 @@ import { initDb } from './db.js';
 import { authRouter } from './auth.js';
 import { queryRouter } from './query.js';
 import { rpcRouter } from './rpc.js';
-import { storageRouter, UPLOAD_DIR } from './storage.js';
+import { storageRouter, UPLOAD_DIR, serveUpload } from './storage.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) > 0 ? Number(process.env.PORT) : 3001;
@@ -29,8 +29,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Local file storage served statically (replaces Supabase Storage).
+// File storage served statically, with database fallback for files that
+// only exist in the DB (fresh deploy) — replaces Supabase Storage.
 app.use('/uploads', express.static(UPLOAD_DIR));
+app.get(/^\/uploads\/.+/, serveUpload);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'fullstackdev-mysql' }));
 

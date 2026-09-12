@@ -134,6 +134,20 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   KEY idx_audit_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Durable file storage: uploads are stored as bytes in the database so they
+-- survive redeploys and exist on every instance (local + hosted). The disk
+-- copy under server/uploads is just a cache; the DB row is the source of truth.
+CREATE TABLE IF NOT EXISTS files_blob (
+  id CHAR(255) PRIMARY KEY,          -- "bucket/path" composite key
+  bucket VARCHAR(100) NOT NULL,
+  path VARCHAR(500) NOT NULL,
+  mime VARCHAR(255) NOT NULL DEFAULT 'application/octet-stream',
+  size INT NOT NULL DEFAULT 0,
+  data LONGBLOB NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_files_blob_bucket (bucket)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Admin-authored learning notes: subject-tagged, visible to everyone, no approval.
 CREATE TABLE IF NOT EXISTS admin_notes (
   id CHAR(36) PRIMARY KEY,

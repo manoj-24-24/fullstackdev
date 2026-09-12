@@ -1,0 +1,39 @@
+# Render blueprint — deploys the whole app as ONE web service.
+# The Express server serves both the built React app and the /api backend,
+# so the frontend's relative /api calls work with zero configuration.
+#
+# One thing Render does NOT provide is MySQL. Before your first deploy,
+# create a MySQL database at one of these providers and copy its connection
+# details into the service's Environment variables (see HOSTING.md):
+#   - Aiven (free "Free-MySQL-1" plan)  - recommended, free forever tier
+#   - Railway / Clever Cloud / CleverDB  - paid or trial options
+#
+# The service expects a Git repo pushed to GitHub/GitLab — see HOSTING.md step 1.
+
+services:
+  - type: web
+    name: fullstackdev
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        sync: false      # set in the Render dashboard from your MySQL provider
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_SSL
+        value: "true"    # hosted MySQL requires TLS; set "false" only for local MySQL
+      - key: DB_CREATE
+        value: "false"   # hosted providers pre-create the database
+      - key: JWT_SECRET
+        generateValue: true   # Render generates a strong random secret on first deploy

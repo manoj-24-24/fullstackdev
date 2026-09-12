@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #102a3a; background: #f4f8f7; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+/* Phones: keep form fields at 16px so iOS Safari never zooms on focus. */
+@media (max-width: 640px) {
+  .field { font-size: 16px; }
+  select.field, input.field, textarea.field { font-size: 16px; }
+}
+::selection { background: #a5f3d0; color: #062b37; }
+@layer components {
+  .app-shell { @apply min-h-screen bg-[#f4f8f7] text-[#102a3a]; }
+  .card { @apply rounded-2xl border border-[#dce9e6] bg-white shadow-[0_12px_40px_rgba(9,48,61,0.06)]; }
+  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-[#087f78] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#06665f] disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-[#cfe1de] bg-white px-4 py-3 text-sm font-semibold text-[#185464] transition hover:border-[#8cc9bd] hover:bg-[#f0faf7] disabled:opacity-50; }
+  .field { @apply w-full rounded-xl border border-[#cfe1de] bg-white px-4 py-3 text-sm text-[#102a3a] outline-none transition placeholder:text-[#87a1a5] focus:border-[#0d968b] focus:ring-4 focus:ring-[#0d968b]/10; }
+  .eyebrow { @apply text-[11px] font-bold uppercase tracking-[0.2em] text-[#087f78]; }
+}
+/* ---------- Day / night theme ---------- */
+html.night { color-scheme: dark; }
+html.night body { background: #0b1720; color: #dcebe9; }
+html.night .app-shell { background: #0b1720; color: #dcebe9; }
+html.night .card { background: #122331; border-color: #1f3a49; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35); }
+html.night .btn-secondary { background: #122331; border-color: #2a4a5c; color: #a8d8cf; }
+html.night .btn-secondary:hover { background: #17303f; border-color: #3d6a7d; }
+html.night .field { background: #0e1e2a; border-color: #2a4a5c; color: #dcebe9; }
+html.night .field::placeholder { color: #5f7d86; }
+html.night .eyebrow { color: #4fd1b5; }
+html.night ::selection { background: #0d5c54; color: #d9fff5; }
+/* Headings inside cards inherit a light tone at night */
+html.night h1, html.night h2, html.night h3 { color: #eaf6f4; }
+html.night .text-\[\#102a3a\], html.night .text-\[\#185464\], html.night .text-\[\#536e74\], html.night .text-\[\#405e65\], html.night .text-\[\#61777c\] { color: #dcebe9; }
+html.night .text-\[\#6c8589\], html.night .text-\[\#8ca1a3\], html.night .text-\[\#7b9295\], html.night .text-\[\#9db1b2\] { color: #8fb0ad; }
+html.night .bg-\[\#f6faf8\], html.night .bg-\[\#f5faf8\], html.night .bg-\[\#f0f8f5\], html.night .bg-\[\#f2f8f6\], html.night .bg-\[\#edf7f4\], html.night .bg-\[\#edf2f2\], html.night .bg-\[\#edf3f1\], html.night .bg-\[\#e4f0ed\] { background-color: #0e2231; }
+html.night .bg-\[\#e7f7f1\], html.night .bg-\[\#effbf5\], html.night .bg-\[\#f0faf7\], html.night .bg-\[\#f5fcf9\], html.night .bg-\[\#f6fcf9\] { background-color: #0d2c33; }
+html.night .bg-\[\#fff9ed\], html.night .bg-\[\#fff3df\], html.night .bg-\[\#fff7df\] { background-color: #2d2513; }
+html.night .bg-\[\#fff4f4\] { background-color: #301b1b; }
+html.night .border-\[\#e5efec\], html.night .border-\[\#dce9e6\], html.night .border-\[\#cfe1de\], html.night .border-\[\#aad9ca\], html.night .border-\[\#b8e6d0\], html.night .border-\[\#f3c7c7\] { border-color: #24404f; }
+html.night aside { background: #0e1e2a; border-color: #1f3a49; }

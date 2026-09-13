@@ -77,12 +77,22 @@ async function applyMigrations() {
     'ALTER TABLE files_blob MODIFY COLUMN data LONGBLOB NULL',
     'ALTER TABLE files_blob ADD COLUMN cloud_public_id VARCHAR(500) NULL',
     'ALTER TABLE files_blob ADD COLUMN cloud_resource_type VARCHAR(20) NULL',
+    // Browser-push subscriptions: one row per device per user.
+    `CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id VARCHAR(64) PRIMARY KEY,
+      user_id VARCHAR(64) NOT NULL,
+      endpoint VARCHAR(500) NOT NULL UNIQUE,
+      p256dh VARCHAR(200) NOT NULL,
+      auth VARCHAR(100) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_push_user (user_id)
+    )`,
   ];
   for (const migration of migrations) {
     try {
       await pool.query(migration);
     } catch (err) {
-      if (err?.errno !== 1060) throw err;
+      if (err?.errno !== 1060 && err?.errno !== 1050) throw err;
     }
   }
 }

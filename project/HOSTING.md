@@ -144,7 +144,22 @@ It copies each file's bytes to the cloud (B2/R2/Cloudinary, whichever is configu
 
 If cloud storage is ever misconfigured, the app automatically falls back to storing files in MySQL, so nothing breaks.
 
-## Step 6 — Things to know about the free tier
+## Step 6 — (Recommended) Real-time push notifications (free, no card)
+
+By default the app polls for new notifications every 10 s while open. To also get **OS-level popups while the app is closed** (like a normal app), the server sends Web Push messages. It needs one VAPID keypair:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Add the two values to **Render → Environment**:
+
+| Key | Value |
+|---|---|
+| `VAPID_PUBLIC_KEY` | the public key the command printed |
+| `VAPID_PRIVATE_KEY` | the private key the command printed |
+
+Then **Save Changes** (redeploys automatically). In the app, each user taps **Enable notifications** once and accepts the browser permission prompt — from then on their devices receive pushes with the app closed, and tapping one opens the app straight into the notification panel.## Step 7 — Things to know about the free tier
 
 - **Spin-down:** after ~15 minutes without traffic the service sleeps; the next visit takes ~30–50 s to wake. Keep the tab open or ping `/api/health` periodically if that bothers you.
 - **Uploads are durable** when stored in MySQL or cloud storage (Cloudinary/R2). Files uploaded before cloud storage was configured lived on the service's local disk, which Render clears on every redeploy — those were migrated into the database. New uploads never touch the disk only.

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'node:crypto';
 import { pool } from './db.js';
 import { requireAuth } from './auth.js';
+import { deliver } from './push.js';
 
 export const queryRouter = Router();
 
@@ -240,6 +241,12 @@ queryRouter.post('/', requireAuth, async (req, res) => {
         }
       }
       await pool.query(sql, params);
+
+      // Real-time delivery: fan this notification out as an OS-level web push
+      // (fire-and-forget — a push failure never fails the write).
+      if (table === 'notifications') {
+        void deliver({ user_id: payload.user_id, title: payload.title, message: payload.message });
+      }
 
       if (single) {
         const keyFilters = (onConflict || 'id').split(',').map((s) => s.trim()).filter((c) => cols.includes(c) && payload[c] !== undefined).map((c) => ({ column: c, operator: 'eq', value: payload[c] }));

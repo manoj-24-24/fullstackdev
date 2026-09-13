@@ -9,6 +9,9 @@ import { queryRouter } from './query.js';
 import { rpcRouter } from './rpc.js';
 import { storageRouter, UPLOAD_DIR, serveUpload } from './storage.js';
 import { initCloudinary } from './cloudinary.js';
+import { initPush, pushEnabled, publicKey, subscribe, unsubscribe } from './push.js';
+import { requireAuth } from './auth.js';
+
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) > 0 ? Number(process.env.PORT) : 3001;
@@ -18,6 +21,7 @@ const DIST_DIR = path.join(__dirname, '..', 'dist');
 const hasDist = fs.existsSync(path.join(DIST_DIR, 'index.html'));
 
 initCloudinary();
+initPush();
 
 const app = express();
 app.use(cors());
@@ -64,6 +68,10 @@ app.use('/api/auth', authRouter);
 app.use('/api/query', queryRouter);
 app.use('/api/rpc', rpcRouter);
 app.use('/api/storage', storageRouter);
+// Browser push subscription management (real-time notification delivery).
+app.get('/api/push/key', (_req, res) => res.json({ data: { key: publicKey(), enabled: pushEnabled() }, error: null }));
+app.post('/api/push/subscribe', requireAuth, (req, res) => { void subscribe(req, res); });
+app.post('/api/push/unsubscribe', requireAuth, (req, res) => { void unsubscribe(req, res); });
 
 app.use((err, _req, res, _next) => {
   console.error('[server] unhandled error', err);

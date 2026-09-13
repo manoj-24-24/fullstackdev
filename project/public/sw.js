@@ -1,5 +1,5 @@
 // FullstackDev service worker: offline-first app shell with network-first API.
-const VERSION = 'fsd-v6';
+const VERSION = 'fsd-v8';
 const SHELL = [
   '/',
   '/index.html',
@@ -69,5 +69,39 @@ self.addEventListener('fetch', (event) => {
       }
       return res;
     }))
+  );
+});
+
+// ---- Real-time notification delivery ----
+// OS-level push while the app is closed: show a system notification that
+// deep-links into the notification panel on click.
+self.addEventListener('push', (event) => {
+  let payload = { title: 'FullstackDev', body: 'You have a new notification', url: '/notifications' };
+  try { payload = { ...payload, ...event.data.json() }; } catch { /* keep defaults */ }
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: '/icon-192.png?v=2',
+      badge: '/icon-192.png?v=2',
+      tag: 'fsd-notification',
+      data: { url: payload.url || '/notifications' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/notifications';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus an existing app window and navigate it to the notification panel.
+      for (const client of clientList) {
+        if ('focus' in client) {
+          client.navigate(url).catch(() => {});
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    })
   );
 });

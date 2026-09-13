@@ -35,6 +35,14 @@ services:
         value: "true"    # hosted MySQL requires TLS; set "false" only for local MySQL
       - key: DB_CREATE
         value: "false"   # hosted providers pre-create the database
+      # Real-time (OS-level) notification delivery via Web Push. Generate a
+      # keypair once with:  npx web-push generate-vapid-keys
+      # and paste the two values here — without them the app still shows
+      # in-app toasts, but no push when the tab/app is closed.
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
       - key: JWT_SECRET
         generateValue: true   # Render generates a strong random secret on first deploy
       # Upload storage so the 1 GB MySQL stays small — configure ONE provider

@@ -5,6 +5,16 @@ import { AppShell } from '@/components/AppShell';
 import type { Profile, Notification } from '@/types';
 import { supabase } from '@/lib/supabase';
 
+// Push subscriptions need the key as raw bytes (URL-safe base64 -> Uint8Array).
+function urlB64ToUint8Array(b64: string): Uint8Array {
+  const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+  const base64 = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
 function App() {
   const [session, setSession] = useState<{ userId: string } | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -89,7 +99,40 @@ function App() {
     return () => clearInterval(iv);
   }, [profile?.id]);
   useEffect(() => { try { if (!localStorage.getItem('fsd_notif_asked') && 'Notification' in window && window.Notification.permission === 'default') setNotifAsk(true); } catch { /* ignore */ } }, []);
-  const enableNotifs = async (): Promise<void> => { try { if ('Notification' in window) await window.Notification.requestPermission(); } catch { /* ignore */ } setNotifAsk(false); try { localStorage.setItem('fsd_notif_asked', '1'); } catch { /* ignore */ } };
+  // Grant permission, then hand the browser's push subscription to the server so
+  // notifications reach this device even when the app is closed.
+  const enableNotifs = async (): Promise<void> => {
+    setNotifAsk(false);
+    try { localStorage.setItem('fsd_notif_asked', '1'); } catch { /* ignore */ }
+    try {
+      if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+      if (await Notification.requestPermission() !== 'granted') return;
+    } catch { /* ignore */ }
+    void subscribePush();
+  };
+
+  // Ask the server for new notifications since the last poll, so we only toast
+  // genuinely fresh mail. Registered with the server so push reaches this device
+  // even when the app is closed.
+  const subscribePush = async (): Promise<void> => {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      const reg = await navigator.serviceWorker.ready;
+      const keyRes = await fetch('/api/push/key');
+      const { data: keyData } = (await keyRes.json()) as { data?: { key?: string; enabled?: boolean } };
+      if (!keyData?.enabled || !keyData.key) return;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(keyData.key) });
+      }
+      const session = (sessionStorage.getItem('fsd_session') || localStorage.getItem('fsd_remember')); 
+      const token = session ? (JSON.parse(session).access_token as string) : '';
+      await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ subscription: sub.toJSON() }) });
+    } catch { /* push is best-effort; in-app toasts still work */ }
+  };
+
+  // Also subscribe silently on load when permission was already granted earlier.
+  useEffect(() => { if ((window as unknown as { __fsdPushHooked?: boolean }).__fsdPushHooked) return; (window as unknown as { __fsdPushHooked?: boolean }).__fsdPushHooked = true; if ('Notification' in window && Notification.permission === 'granted' && profile?.id) { void subscribePush(); } }, [profile?.id]);
   const openToast = async (n: Notification): Promise<void> => { setToasts((t) => t.filter((x) => x.id !== n.id)); await supabase.from('notifications').update({ read: true }).eq('id', n.id); navigate('/notifications'); };
   if (loading) return <LoadingScreen />;
   if (route === '/reset-password') return <PasswordResetScreen />;

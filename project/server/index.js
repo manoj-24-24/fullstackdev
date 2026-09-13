@@ -9,8 +9,6 @@ import { queryRouter } from './query.js';
 import { rpcRouter } from './rpc.js';
 import { storageRouter, UPLOAD_DIR, serveUpload } from './storage.js';
 import { initCloudinary } from './cloudinary.js';
-import { requireAdmin } from './auth.js';
-import migrateRouter from './migrate-route.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) > 0 ? Number(process.env.PORT) : 3001;
@@ -66,9 +64,6 @@ app.use('/api/auth', authRouter);
 app.use('/api/query', queryRouter);
 app.use('/api/rpc', rpcRouter);
 app.use('/api/storage', storageRouter);
-// TEMPORARY admin-only migration trigger (blob bytes -> cloud storage).
-// Removed in the next commit once the one-time migration has run.
-app.use('/api/admin/migrate-blobs', requireAdmin, migrateRouter);
 
 app.use((err, _req, res, _next) => {
   console.error('[server] unhandled error', err);

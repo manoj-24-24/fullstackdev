@@ -37,3 +37,7 @@ export interface ContributionFile { id: string; contribution_id: string; file_ur
 export type NoteCategory = 'Frontend' | 'Backend' | 'Cloud Computing';
 export interface StudyNote { id: string; user_id: string; category: NoteCategory; title: string; description: string; file_path: string; file_name: string; file_type: string; created_at: string; profiles?: { full_name: string; role: string } | null; }
 export interface Syllabus { id: string; subject_id: string; title: string; file_path: string; file_name: string; file_type: string; uploaded_by: string; created_at: string; updated_at: string; subjects?: { id: string; name: string } | null; profiles?: { full_name: string; role: string } | null; }
+
+// Moved verbatim from App.tsx during the module split.
+export interface AdminNote { id: string; author_id: string; subject_id: string | null; title: string; summary: string | null; description: string | null; code: string | null; file_path: string | null; file_name: string | null; file_type: string | null; created_at: string; subjects?: { name: string } | null; profiles?: { full_name: string } | null; }
+export interface NoteFeedbackItem { id: string; note_id: string; user_id: string; reviewer_name: string; role?: string | null; feedback: string; created_at: string; profiles?: { role: string } | null; }

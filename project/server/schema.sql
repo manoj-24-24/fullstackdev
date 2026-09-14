@@ -198,3 +198,16 @@ CREATE TABLE IF NOT EXISTS note_feedback (
   CONSTRAINT fk_note_feedback_note FOREIGN KEY (note_id) REFERENCES admin_notes(id) ON DELETE CASCADE,
   CONSTRAINT fk_note_feedback_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Browser-push subscriptions: one row per device per user. Endpoints expire
+-- and are pruned by server/push.js on 404/410 delivery failures.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  endpoint VARCHAR(500) NOT NULL UNIQUE,
+  p256dh VARCHAR(200) NOT NULL,
+  auth VARCHAR(100) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_push_user (user_id),
+  CONSTRAINT fk_push_user FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

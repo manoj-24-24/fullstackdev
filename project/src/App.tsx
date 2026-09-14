@@ -125,8 +125,8 @@ function App() {
       if (!sub) {
         sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(keyData.key) });
       }
-      const session = (sessionStorage.getItem('fsd_session') || localStorage.getItem('fsd_remember')); 
-      const token = session ? (JSON.parse(session).access_token as string) : '';
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token || '';
       await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ subscription: sub.toJSON() }) });
     } catch { /* push is best-effort; in-app toasts still work */ }
   };

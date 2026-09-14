@@ -1,5 +1,5 @@
 // FullstackDev service worker: offline-first app shell with network-first API.
-const VERSION = 'fsd-v8';
+const VERSION = 'fsd-v9';
 const SHELL = [
   '/',
   '/index.html',
@@ -73,18 +73,23 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ---- Real-time notification delivery ----
-// OS-level push while the app is closed: show a system notification that
-// deep-links into the notification panel on click.
+// OS-level push while the app is closed or in the background: show a system
+// notification that deep-links into the notification panel on click. When an
+// app window is visible on screen, skip the system notification — the app's
+// own poller toasts the message, and showing both would duplicate it.
 self.addEventListener('push', (event) => {
   let payload = { title: 'FullstackDev', body: 'You have a new notification', url: '/notifications' };
   try { payload = { ...payload, ...event.data.json() }; } catch { /* keep defaults */ }
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      icon: '/icon-192.png?v=2',
-      badge: '/icon-192.png?v=2',
-      tag: 'fsd-notification',
-      data: { url: payload.url || '/notifications' },
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      if (clientList.some((client) => client.visibilityState === 'visible')) return;
+      return self.registration.showNotification(payload.title, {
+        body: payload.body,
+        icon: '/icon-192.png?v=2',
+        badge: '/icon-192.png?v=2',
+        tag: 'fsd-notification',
+        data: { url: payload.url || '/notifications' },
+      });
     })
   );
 });

@@ -34,6 +34,7 @@ rpcRouter.post('/', requireAuth, async (req, res) => {
       try {
         await conn.beginTransaction();
         // Tables WITHOUT FK cascades — clean up first.
+        await conn.query('DELETE FROM push_subscriptions WHERE user_id = ?', [userId]);
         await conn.query('DELETE FROM feedback WHERE teacher_id = ?', [userId]);
         await conn.query('DELETE FROM daily_activity WHERE student_id = ?', [userId]);
         await conn.query('DELETE FROM contributions WHERE student_id = ?', [userId]);

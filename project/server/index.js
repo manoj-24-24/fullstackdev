@@ -87,7 +87,23 @@ initDb()
   .catch((err) => {
     console.error('[server] Failed to connect to MySQL:', err.message);
     console.error('[server] Check DB_HOST / DB_PORT / DB_USER / DB_PASSWORD / DB_NAME in project/.env');
-    process.exit(1);
+    // Hosted MySQL providers occasionally reject a connection burst (or wake
+    // slowly). Exiting makes Render show a failed deploy and keeps failing on
+    // every restart, so retry instead: first success binds the port.
+    console.error('[server] Retrying MySQL every 5s until it connects...');
+    const retry = (attempt) => {
+      initDb()
+        .then(() => {
+          app.listen(PORT, () => {
+            console.log(`[server] FullstackDev MySQL API running on http://localhost:${PORT}${hasDist ? ' (serving the built app)' : ''} (after ${attempt} retries)`);
+          });
+        })
+        .catch((retryErr) => {
+          console.error(`[server] MySQL connection attempt ${attempt} failed:`, retryErr.message);
+          setTimeout(() => retry(attempt + 1), 5000);
+        });
+    };
+    setTimeout(() => retry(1), 5000);
   });
 
 // Never crash the whole API because port 3001 happens to be busy.

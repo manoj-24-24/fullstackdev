@@ -159,7 +159,9 @@ Add the two values to **Render → Environment**:
 | `VAPID_PUBLIC_KEY` | the public key the command printed |
 | `VAPID_PRIVATE_KEY` | the private key the command printed |
 
-Then **Save Changes** (redeploys automatically). In the app, each user taps **Enable notifications** once and accepts the browser permission prompt — from then on their devices receive pushes with the app closed, and tapping one opens the app straight into the notification panel.## Step 7 — Things to know about the free tier
+Then **Save Changes** (redeploys automatically). In the app, each user taps **Enable notifications** once and accepts the browser permission prompt — from then on their devices receive pushes with the app closed, and tapping one opens the app straight into the notification panel.
+
+## Step 7 — Things to know about the free tier
 
 - **Spin-down:** after ~15 minutes without traffic the service sleeps; the next visit takes ~30–50 s to wake. Keep the tab open or ping `/api/health` periodically if that bothers you.
 - **Uploads are durable** when stored in MySQL or cloud storage (Cloudinary/R2). Files uploaded before cloud storage was configured lived on the service's local disk, which Render clears on every redeploy — those were migrated into the database. New uploads never touch the disk only.

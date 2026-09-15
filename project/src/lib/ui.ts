@@ -7,6 +7,75 @@ export const formatDate = (date: string): string => new Intl.DateTimeFormat('en'
 export const today = (): string => new Date().toISOString().slice(0, 10);
 
 export const friendlyError = (): string => 'Something went wrong. Please try again.';
+
+// ---- Upload acceptance: PDF stays first-class, and documents, images,
+// video, audio, archives, spreadsheets and code files are allowed on top.
+// Google Docs exports (application/vnd.openxmlformats-officedocument.*, .gdoc)
+// and legacy Office formats are included explicitly.
+export const UPLOAD_ACCEPT = [
+  'application/pdf',
+  'image/*',
+  'video/*',
+  'audio/*',
+  '.txt', '.md', '.csv',
+  '.doc', '.docx', '.odt', '.rtf', '.pages',
+  '.xls', '.xlsx', '.ods', '.ppt', '.pptx', '.odp', '.key',
+  '.zip', '.rar', '.7z', '.tar', '.gz',
+  '.js', '.jsx', '.ts', '.tsx', '.css', '.scss', '.html', '.json', '.xml', '.yml', '.yaml', '.sql', '.py', '.java', '.c', '.cpp', '.cs', '.go', '.rs', '.php', '.rb', '.sh',
+  '.gdoc', '.gsheet', '.gslides', '.gdraw',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.oasis.opendocument.text',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/vnd.oasis.opendocument.presentation',
+  'application/zip', 'application/x-zip-compressed', 'application/x-rar-compressed', 'application/x-7z-compressed', 'application/gzip', 'application/x-tar',
+  'text/plain', 'text/markdown', 'text/csv', 'text/html', 'text/css', 'application/json', 'application/xml', 'text/xml',
+  'application/rtf', 'application/x-rtf',
+].join(',');
+
+const UPLOAD_ALLOWED_PREFIXES = ['image/', 'video/', 'audio/', 'text/'];
+const UPLOAD_ALLOWED_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.oasis.opendocument.text',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/vnd.oasis.opendocument.presentation',
+  'application/zip', 'application/x-zip-compressed', 'application/x-rar-compressed', 'application/x-7z-compressed', 'application/gzip', 'application/x-tar',
+  'application/json', 'application/xml', 'application/rtf', 'application/x-rtf',
+  'application/octet-stream',
+  'application/gdoc', 'application/gsheet', 'application/gslides', 'application/gdraw',
+]);
+const UPLOAD_ALLOWED_EXTENSIONS = new Set([
+  '.txt', '.md', '.csv', '.doc', '.docx', '.odt', '.rtf', '.pages',
+  '.xls', '.xlsx', '.ods', '.ppt', '.pptx', '.odp', '.key',
+  '.zip', '.rar', '.7z', '.tar', '.gz',
+  '.js', '.jsx', '.ts', '.tsx', '.css', '.scss', '.html', '.htm', '.json', '.xml', '.yml', '.yaml', '.sql', '.py', '.java', '.c', '.cpp', '.cs', '.go', '.rs', '.php', '.rb', '.sh',
+  '.gdoc', '.gsheet', '.gslides', '.gdraw',
+]);
+
+// True when the browser-reported MIME type or the file extension is on the
+// accepted list. Some browsers report Google Docs exports as octet-stream or
+// an empty type, so the extension check is what catches those.
+export const isUploadAllowed = (file: { type?: string; name?: string }): boolean => {
+  const type = (file.type || '').toLowerCase();
+  if (type && (UPLOAD_ALLOWED_PREFIXES.some((p) => type.startsWith(p)) || UPLOAD_ALLOWED_TYPES.has(type))) return true;
+  const name = (file.name || '').toLowerCase();
+  const dot = name.lastIndexOf('.');
+  return dot >= 0 && UPLOAD_ALLOWED_EXTENSIONS.has(name.slice(dot));
+};
+
+export const uploadTypeHint = 'PDF, Word, Excel, PowerPoint, images, video, audio, ZIP, code, and Google Docs exports · 25 MB maximum';
 // Time-aware greeting so it says the right thing all day, with a sun/moon icon.
 
 export const authErrorMessage = (error: { message?: string; code?: string }): string => {

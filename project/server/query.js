@@ -186,7 +186,25 @@ queryRouter.post('/', requireAuth, async (req, res) => {
         where.clauses.push(`${q(ownerCol)} = ?`);
         where.params.push(req.userId);
       }
+      // Child rows are captured BEFORE the delete and cleaned up after:
+      // databases created before FK cascades were added to schema.sql have no
+      // ON DELETE CASCADE on contribution_files / feedback.
+      let contributionIds = [];
+      if (table === 'contributions') {
+        const [rows_] = await pool.query(`SELECT id FROM ${q(table)} WHERE ${where.clauses.join(' AND ')}`, where.params).catch(() => [[]]);
+        contributionIds = (rows_ || []).map((r) => r.id);
+      }
       const [result] = await pool.query(`DELETE FROM ${q(table)} WHERE ${where.clauses.join(' AND ')}`, where.params);
+      if (table === 'contributions' && result.affectedRows && contributionIds.length) {
+        const ph = contributionIds.map(() => '?').join(', ');
+        const [files] = await pool.query(`SELECT file_url FROM contribution_files WHERE contribution_id IN (${ph})`, contributionIds).catch(() => [[]]);
+        await pool.query(`DELETE FROM contribution_files WHERE contribution_id IN (${ph})`, contributionIds);
+        await pool.query(`DELETE FROM feedback WHERE contribution_id IN (${ph})`, contributionIds);
+        for (const f of files || []) {
+          const p = String(f.file_url || '');
+          if (p) void pool.query('DELETE FROM files_blob WHERE id = ?', [`contribution-files/${p}`]);
+        }
+      }
       if (!result.affectedRows) {
         return res.status(404).json({ data: null, error: { message: 'That record was not found, or you do not have access to it.' } });
       }

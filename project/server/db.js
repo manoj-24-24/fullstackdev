@@ -87,12 +87,21 @@ async function applyMigrations() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       KEY idx_push_user (user_id)
     )`,
+    // Subjects can be deleted by admins: contributions survive with
+    // subject_id = NULL instead of blocking the delete (previously the FK
+    // had no ON DELETE action, so a subject in use could not be removed).
+    'ALTER TABLE contributions MODIFY COLUMN subject_id CHAR(36) NULL',
+    'ALTER TABLE contributions DROP FOREIGN KEY fk_contributions_subject',
+    'ALTER TABLE contributions ADD CONSTRAINT fk_contributions_subject FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE SET NULL',
   ];
   for (const migration of migrations) {
     try {
       await pool.query(migration);
     } catch (err) {
-      if (err?.errno !== 1060 && err?.errno !== 1050) throw err;
+      // 1060 duplicate column, 1050 table exists, 1091/1025 constraint or key
+      // does not exist (the FK re-create below may race or already be applied),
+      // 1826 duplicate foreign key name.
+      if (![1060, 1050, 1091, 1025, 1826].includes(err?.errno)) throw err;
     }
   }
 }
@@ -132,9 +141,13 @@ async function seed() {
     }
   }
 
-  // Learning subjects.
-  const subjects = ['Frontend', 'Backend', 'Cloud Computing'];
-  for (const name of subjects) {
-    await pool.query('INSERT IGNORE INTO subjects (id, name) VALUES (?, ?)', [crypto.randomUUID(), name]);
+  // Learning subjects — seeded once. Re-seeding on every boot would resurrect
+  // subjects the admin deliberately deleted.
+  const [subjectCount] = await pool.query('SELECT COUNT(*) AS n FROM subjects');
+  if (!subjectCount[0].n) {
+    const subjects = ['Frontend', 'Backend', 'Cloud Computing'];
+    for (const name of subjects) {
+      await pool.query('INSERT IGNORE INTO subjects (id, name) VALUES (?, ?)', [crypto.randomUUID(), name]);
+    }
   }
 }

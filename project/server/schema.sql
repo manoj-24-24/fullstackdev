@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS subjects (
 CREATE TABLE IF NOT EXISTS contributions (
   id CHAR(36) PRIMARY KEY,
   student_id CHAR(36) NOT NULL,
-  subject_id CHAR(36) NOT NULL,
+  subject_id CHAR(36) NULL,
   title VARCHAR(500) NOT NULL,
   summary TEXT NOT NULL,
   description MEDIUMTEXT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS contributions (
   KEY idx_contributions_student (student_id),
   KEY idx_contributions_subject (subject_id),
   KEY idx_contributions_date (contribution_date),
-  CONSTRAINT fk_contributions_subject FOREIGN KEY (subject_id) REFERENCES subjects(id)
+  CONSTRAINT fk_contributions_subject FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS contribution_files (

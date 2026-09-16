@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { formatDate, friendlyError, isUploadAllowed, UPLOAD_ACCEPT, uploadTypeHint } from '@/lib/ui';
+import { formatDate, friendlyError, isUploadAllowed, uploadFailedMessage, UPLOAD_ACCEPT, uploadTypeHint } from '@/lib/ui';
 import { PageHeader, StatusPill } from '@/components/shared';
 import { AdminNotesBoard } from '@/pages/admin';
 import { FileViewer } from '@/components/viewer';
@@ -34,7 +34,7 @@ export function SyllabusSection({ profile }: { profile: Profile }): JSX.Element 
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-');
     const path = `syllabus/${crypto.randomUUID()}-${safeName}`;
     const up = await supabase.storage.from('study-notes').upload(path, file, { contentType: file.type, upsert: false });
-    if (up.error) { setMessage('The syllabus could not be uploaded. Please try again.'); setBusy(false); return; }
+    if (up.error) { setMessage(uploadFailedMessage(up.error)); setBusy(false); return; }
     const payload = { subject_id: target, title: 'Syllabus', file_path: path, file_name: file.name, file_type: file.type, uploaded_by: profile.id };
     const result = existing
       ? await supabase.from('syllabus').upsert({ ...payload, id: existing.id }, { onConflict: 'id' }).select().maybeSingle()
@@ -80,7 +80,7 @@ export function NotesSection({ profile }: { profile: Profile }): JSX.Element {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-');
     const path = `${profile.id}/${crypto.randomUUID()}-${safeName}`;
     const upload = await supabase.storage.from('study-notes').upload(path, file, { contentType: file.type, upsert: false });
-    if (upload.error) { setMessage('The note could not be uploaded. Please try again.'); setBusy(false); return; }
+    if (upload.error) { setMessage(uploadFailedMessage(upload.error)); setBusy(false); return; }
     const result = await supabase.from('study_notes').insert({ category, title: title.trim(), description: description.trim(), file_path: path, file_name: file.name, file_type: file.type }).select().maybeSingle();
     if (result.error || !result.data) { await supabase.storage.from('study-notes').remove([path]); setMessage('The note could not be saved. Please try again.'); setBusy(false); return; }
     setTitle(''); setDescription(''); setFile(null); setMessage('Note uploaded successfully.'); await load(); setBusy(false);
@@ -133,7 +133,7 @@ export function NoteManageModal({ note, onClose, onChanged }: { note: StudyNote;
     const safeName = newFile.name.replace(/[^a-zA-Z0-9._-]/g, '-');
     const path = `${note.user_id}/${crypto.randomUUID()}-${safeName}`;
     const upload = await supabase.storage.from('study-notes').upload(path, newFile, { contentType: newFile.type, upsert: false });
-    if (upload.error) { setMessage('The new file could not be uploaded.'); setBusy(false); return; }
+    if (upload.error) { setMessage(uploadFailedMessage(upload.error)); setBusy(false); return; }
     const { error } = await supabase.from('study_notes').update({ file_path: path, file_name: newFile.name, file_type: newFile.type }).eq('id', note.id).eq('user_id', note.user_id);
     if (error) { await supabase.storage.from('study-notes').remove([path]); setMessage(friendlyError()); setBusy(false); return; }
     await supabase.storage.from('study-notes').remove([note.file_path]);

@@ -76,6 +76,14 @@ export const isUploadAllowed = (file: { type?: string; name?: string }): boolean
 };
 
 export const uploadTypeHint = 'PDF, Word, Excel, PowerPoint, images, video, audio, ZIP, code, and Google Docs exports · 25 MB maximum';
+
+// One honest message for every failed upload: the server's own reason when it
+// gave one (too large, wrong type…), otherwise a connection problem — which is
+// what "Offline — showing your saved data" in the corner means.
+export const uploadFailedMessage = (error?: { message?: string } | null): string => {
+  if (error?.message) return `Upload failed: ${error.message}`;
+  return 'Upload failed — the app could not reach the server. Check your connection (the Offline notice at the bottom means you are offline) and try again.';
+};
 // Time-aware greeting so it says the right thing all day, with a sun/moon icon.
 
 export const authErrorMessage = (error: { message?: string; code?: string }): string => {

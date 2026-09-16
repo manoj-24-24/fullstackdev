@@ -3,7 +3,7 @@ import cors from 'cors';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { initDb } from './db.js';
+import { initDb, pool } from './db.js';
 import { authRouter } from './auth.js';
 import { queryRouter } from './query.js';
 import { rpcRouter } from './rpc.js';
@@ -41,7 +41,17 @@ app.use((req, res, next) => {
 app.use('/uploads', express.static(UPLOAD_DIR));
 app.get(/^\/uploads\/.+/, serveUpload);
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'fullstackdev-mysql' }));
+// Health check doubles as a database keep-alive: the SELECT 1 counts as
+// activity, so a single uptime monitor hitting this endpoint prevents the
+// free-tier hosted MySQL from idling out and dropping its DNS name.
+app.get('/api/health', async (_req, res) => {
+  try {
+    if (pool) await pool.query('SELECT 1');
+    res.json({ ok: true, service: 'fullstackdev-mysql', database: 'connected' });
+  } catch (err) {
+    res.json({ ok: true, service: 'fullstackdev-mysql', database: 'unavailable' });
+  }
+});
 
 if (hasDist) {
   // Single-service deployment: serve the built app, then fall back to
